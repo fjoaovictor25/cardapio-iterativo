@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cardápio Digital Santa Brasa</title>
+  
+  <!-- Carregando Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  
+  <style>
+    /* Estilos personalizados */
+    body {
+      background-color: #fce8e8;
+      font-family: 'Inter', sans-serif;
+    }
+    .cardapio-title {
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      color: #333;
+    }
+    .category-btn {
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+    .category-btn.active {
+      background-color: #9333ea;
+      color: white;
+      font-weight: bold;
+    }
+    .item-card {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      border-radius: 1rem;
+    }
+    .item-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .btn-custom {
+      border-radius: 50px;
+    }
+    /* Estilo para a barra de rolagem personalizada */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #d4d4d4;
+      border-radius: 10px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #a3a3a3;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Conteúdo Principal -->
+  <div class="container py-5">
+    <header class="text-center mb-5">
+      <h1 class="cardapio-title display-4">Cardápio Digital Santa Brasa</h1>
+      <p class="lead text-muted mt-2">Sinta-se em casa e faça o seu pedido!</p>
+    </header>
+
+    <div class="row gx-lg-5">
+      <!-- Seção do Menu -->
+      <div class="col-lg-8">
+        <div class="mb-4">
+          <input type="text" id="search-input" class="form-control form-control-lg rounded-pill shadow-sm" placeholder="Pesquisar pratos e bebidas...">
+        </div>
+        <nav class="d-flex justify-content-center mb-4 overflow-auto">
+          <div id="category-nav" class="d-flex flex-nowrap">
+            <!-- Botões das categorias serão inseridos aqui pelo JavaScript -->
+          </div>
+        </nav>
+        <div id="menu-items-container" class="row row-cols-1 row-cols-md-2 g-4">
+          <!-- Itens do cardápio serão inseridos aqui pelo JavaScript -->
+        </div>
+      </div>
+
+      <!-- Seção do Carrinho -->
+      <div class="col-lg-4 mt-4 mt-lg-0">
+        <div class="bg-white p-4 rounded-4 shadow-lg sticky-top" style="top: 2rem;">
+          <h2 class="h3 mb-4 text-dark">O seu Carrinho</h2>
+          <div id="cart-container" class="custom-scrollbar" style="max-height: 400px; overflow-y: auto;">
+            <!-- Itens do carrinho serão inseridos aqui pelo JavaScript -->
+          </div>
+          <div class="mt-4 pt-4 border-top">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <span class="h4 mb-0 text-dark">Total:</span>
+              <span id="cart-total" class="h3 mb-0 text-primary">R$ 0.00</span>
+            </div>
+            <div class="d-grid gap-2">
+              <button id="order-btn" class="btn btn-success btn-lg btn-custom" disabled>
+                Enviar Pedido
+              </button>
+              <button id="payment-btn" class="btn btn-primary btn-lg btn-custom" disabled>
+                Pagar Conta
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Informações do Cliente -->
+  <div class="modal fade" id="clientInfoModal" tabindex="-1" aria-labelledby="clientInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content rounded-4 shadow-lg">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title h4 text-dark" id="clientInfoModalLabel">Informações para o Pedido</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body pt-0">
+          <p class="text-muted">Por favor, preencha os seus dados para que possamos enviar o pedido.</p>
+          <form id="client-info-form">
+            <div class="mb-3">
+              <label for="client-name" class="form-label text-muted">O seu Nome</label>
+              <input type="text" class="form-control rounded-pill" id="client-name" placeholder="O seu nome" required>
+            </div>
+            <div class="mb-3">
+              <label for="client-table" class="form-label text-muted">Número da Mesa</label>
+              <input type="text" class="form-control rounded-pill" id="client-table" placeholder="Ex: 5" required>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" id="confirm-order-btn" class="btn btn-success rounded-pill">Confirmar Pedido</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Carregando Bootstrap 5.3 JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Dados do cardápio
+      const menuData = {
+        'drinks-classicos': [
+          { id: 'dc-1', name: 'Negroni', description: 'Drink clássico de Campari, Martini e Gin.', price: 26.00, image: 'https://images.unsplash.com/photo-1627940179979-d3e9114acdfa?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'dc-2', name: 'Aperol Spritz', description: 'Aperol, espumante e água com gás.', price: 25.00, image: 'https://images.unsplash.com/photo-1601006579899-234b6b194098?q=80&w=1924&auto=format&fit=crop' },
+          { id: 'dc-3', name: 'Moscow Mule', description: 'Vodka, xarope de gengibre, sumo de limão e espuma da casa.', price: 25.00, image: 'https://images.unsplash.com/photo-1624899553753-431f45778a4c?q=80&w=1964&auto=format&fit=crop' },
+          { id: 'dc-4', name: 'Gin Tonica', description: 'Gin, limão siciliano, alecrim e água tônica.', price: 23.00, image: 'https://images.unsplash.com/photo-1595183492723-96b6534575f0?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'dc-5', name: 'Caipirinha', description: 'Cachaça 60ML, frutas: Tangerina, Abacaxi, Limão, Morango ou kiwi.', price: 16.00, image: 'https://images.unsplash.com/photo-1549488344-934c264a93c7?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'dc-6', name: 'Caipiroska Nacional', description: 'Vodka 75ml, frutas: Tangerina, morango ou kiwi.', price: 22.00, image: 'https://images.unsplash.com/photo-1551690553-911e86a07604?q=80&w=1936&auto=format&fit=crop' },
+          { id: 'dc-7', name: 'Caipiroska Absolut', description: 'Vodka 75ml, frutas: Tangerina, morango ou kiwi.', price: 28.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'dc-8', name: 'Fitzgerald', description: 'Gin, mix de citricos e angostura.', price: 25.00, image: 'https://images.unsplash.com/photo-1601006579899-234b6b194098?q=80&w=1924&auto=format&fit=crop' },
+          { id: 'dc-9', name: 'Gin tropical', description: 'Gin, xarope de tangerina, limão, red bull de frutas tropicais e alecrim.', price: 27.00, image: 'https://images.unsplash.com/photo-1592652755355-15a0c102a94f?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'dc-10', name: 'Mojito', description: 'Rum Bacardi, hortelã, xarope de acucar e água com gas.', price: 24.00, image: 'https://images.unsplash.com/photo-1563220468-245781a7b8e5?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'dc-11', name: 'Caipiroska Nacional - Limão ou abacaxi', description: 'Vodka 75ml, frutas: Limão ou Abacaxi', price: 19.00, image: 'https://images.unsplash.com/photo-1549488344-934c264a93c7?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'dc-12', name: 'Caipiroska Absolut - Limão ou abacaxi', description: 'Vodka 75ml, frutas: Limão ou Abacaxi', price: 25.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+        ],
+        'drinks-autorais': [
+          { id: 'da-1', name: 'Framboá', description: 'Gin, xarope de framboesa, chá de hibísco e sumo de limão.', price: 25.00, image: 'https://images.unsplash.com/photo-1619881673891-9e79d1a3c74d?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'da-2', name: 'Santa Brasa', description: 'Gin, licor, xarope de tangerina e refrigerante citrus.', price: 25.00, image: 'https://images.unsplash.com/photo-1606553894451-b8478417c805?q=80&w=1964&auto=format&fit=crop' },
+          { id: 'da-3', name: 'Cosmoflorida', description: 'Vodka, licor de laranja, xarope de grapefruit, morango e limão.', price: 28.00, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'da-4', name: 'Embrasando', description: 'Vodka, acerola, xarope de laranja, limão e espuma da casa.', price: 24.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'da-5', name: 'Maracugin', description: 'Gin, maracujá, xarope de manjericão e mix de cítricos.', price: 23.00, image: 'https://images.unsplash.com/photo-1606553894451-b8478417c805?q=80&w=1964&auto=format&fit=crop' },
+          { id: 'da-6', name: 'Red Coconut', description: 'Vodka, xarope de morango, sumo de limão e água de coco.', price: 23.00, image: 'https://images.unsplash.com/photo-1619881673891-9e79d1a3c74d?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'da-7', name: 'Monólitos', description: 'Cachaça, mix de limões e melaço de rapadura.', price: 23.00, image: 'https://images.unsplash.com/photo-1627940179979-d3e9114acdfa?q=80&w=1974&auto=format&fit=crop' },
+        ],
+        'drinks-sem-alcool': [
+          { id: 'dsa-1', name: 'Fake Zero', description: 'Xarope de morango e framboesa, suco de laranja, limão e espuma da casa.', price: 17.00, image: 'https://images.unsplash.com/photo-1563777598822-7776b328a3f8?q=80&w=1964&auto=format&fit=crop' },
+          { id: 'dsa-2', name: 'Golden Hour', description: 'Suco de maracujá, gengibre, sumo de limão e água com gas.', price: 16.00, image: 'https://images.unsplash.com/photo-1627940179979-d3e9114acdfa?q=80&w=1974&auto=format&fit=crop' },
+        ],
+        'entradas': [
+          { id: 'e-1', name: 'Croqueta de Costela', description: '5 unidades de bolinhos de carne bovina empanados e fritos, servidos com aioli da casa.', price: 30.00, image: 'https://images.unsplash.com/photo-1623861590741-fe23a9d722e0?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'e-2', name: 'Maminha de Ervas', description: '300g de maminha Angus na manteiga da casa servidas com batatas bravas.', price: 52.00, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'e-3', name: 'Pão de Alho', description: 'Unidade de pão francês recheado com pasta de alho da casa.', price: 10.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'e-4', name: 'Linguiça Toscana', description: '250g de linguiça suína servida com farofa e vinagrete.', price: 29.00, image: 'https://images.unsplash.com/photo-1623861590741-fe23a9d722e0?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'e-5', name: 'Linguiça Cuiabana C/ Queijo', description: '250g de linguiça suína cuiabana servida com farofa e vinagrete.', price: 33.00, image: 'https://images.unsplash.com/photo-1623861590741-fe23a9d722e0?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'e-6', name: 'Feijão Verde', description: 'Feijão verde com queijo coalho, creme de leite fresco e cebolinha.', price: 29.00, image: 'https://images.unsplash.com/photo-1606553894451-b8478417c805?q=80&w=1964&auto=format&fit=crop' },
+          { id: 'e-7', name: 'Costelinha Barbecue', description: '400g de costelinha barbecue servido com batata frita.', price: 42.00, image: 'https://images.unsplash.com/photo-1627940179979-d3e9114acdfa?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'e-8', name: 'Batata Frita', description: '300g de batata frita servida com molho da casa', price: 24.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'e-9', name: 'Filé com Fritas', description: '300g de filé mignon servido com fritas da casa.', price: 47.00, image: 'https://images.unsplash.com/photo-1623861590741-fe23a9d722e0?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'e-10', name: 'Camarão Crocante', description: 'Camarão empanado na farinha panko servido com aioli da casa.', price: 38.00, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'e-11', name: 'Queijo Coalho Crocante', description: 'Queijo coalho crocante servido com melaço de cana.', price: 23.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+        ],
+        'cortes-para-compartilhar': [
+          { id: 'cc-1', name: 'Picanha Bovina (200g) Angus', description: '', price: 50.00, image: 'https://images.unsplash.com/photo-1627940179979-d3e9114acdfa?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'cc-2', name: 'Maminha Bovina (200g) Angus', description: '', price: 34.00, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'cc-3', name: 'Fraldinha (400g) Angus', description: '', price: 89.00, image: 'https://images.unsplash.com/photo-1623861590741-fe23a9d722e0?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'cc-4', name: 'Chorizo (300g) Angus', description: '', price: 62.00, image: 'https://images.unsplash.com/photo-1623861590741-fe23a9d722e0?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'cc-5', name: 'Beef Ancho (300g) Angus', description: '', price: 56.00, image: 'https://images.unsplash.com/photo-1627940179979-d3e9114acdfa?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'cc-6', name: 'Baby Beef (300g) Angus', description: '', price: 62.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'cc-7', name: 'Picanha Suína (300g)', description: '', price: 32.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+        ],
+        'burguers': [
+          { id: 'b-1', name: 'Cheeseburguer', description: 'Pão brioche, hamburguer angus 170g, queijo cheddar e maionese da casa.', price: 26.00, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'b-2', name: 'Cheesebacon', description: 'Pão brioche, hamburguer 170g, queijo cheddar, bacon em cubos e maionese da casa.', price: 28.00, image: 'https://images.unsplash.com/photo-1619881673891-9e79d1a3c74d?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'b-3', name: 'Onion Burguer', description: 'Pão brioche, hamburguer 170g, queijo cheddar, aneis de cebola, molho barbecue e maionese da casa.', price: 28.00, image: 'https://images.unsplash.com/photo-1606553894451-b8478417c805?q=80&w=1964&auto=format&fit=crop' },
+        ],
+        'especialidades-da-casa': [
+          { id: 'ec-1', name: 'Chorizo ao Creme de Parmesão', description: 'Chorizo grelhado Angus servido com fettuccine ao molho de parmesão.', price: 62.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'ec-2', name: 'Picanha Biro Biro', description: 'Picanha grelhada Angus servida com arroz biro biro e batata frita.', price: 61.00, image: 'https://images.unsplash.com/photo-1627940179979-d3e9114acdfa?q=80&w=1974&auto=format&fit=crop' },
+        ],
+        'pratos-para-compartilhar': [
+          { id: 'pc-1', name: 'Tabua Santa Brasa', description: 'Arroz biro biro, batata frita, 200g de maminha Angus, 300g de picanha suína e 250g de linguiça toscana.', price: 145.00, image: 'https://images.unsplash.com/photo-1623861590741-fe23a9d722e0?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'pc-2', name: 'Tabua do Assador', description: 'Arroz de alho, macaxeira frita, farofa de ovo e banana, 300g de baby beef Angus, 200g de maminha Angus e 250g de linguica toscana.', price: 165.00, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'pc-3', name: 'Tabua da Parrilla', description: 'Baião de feijão verde, farofa de cebola,ovo e bacon, 400g de fraldinha Angus e 250g de linguiça toscana.', price: 155.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+        ],
+        'saladas': [
+          { id: 's-1', name: 'Salada da Casa', description: 'Alface americano, cenoura ralada, tomate cereja, manga, queijo parmesão e molho mel e mostarda.', price: 26.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 's-2', name: 'Salada de Frango', description: 'Alface americano, cenoura ralada, croutons, tomate cereja, manga, queijo parmesão, frango desfiado e molho mel e mostarda.', price: 33.00, image: 'https://images.unsplash.com/photo-1623861590741-fe23a9d722e0?q=80&w=1974&auto=format&fit=crop' },
+        ],
+        'guarnicoes': [
+          { id: 'g-1', name: 'Arroz Branco', description: 'Preço pode variar.', price: 9.00, image: 'https://images.unsplash.com/photo-1619881673891-9e79d1a3c74d?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'g-2', name: 'Arroz Biro Biro', description: 'Arroz branco, bacon, ovo, batata palha e cebolinha. Preço pode variar.', price: 13.00, image: 'https://images.unsplash.com/photo-1623861590741-fe23a9d722e0?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'g-3', name: 'Arroz Piemontese', description: 'Arroz branco, presunto, champion, mussarela e creme de leite fresco. Preço pode variar.', price: 18.00, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'g-4', name: 'Arroz de Brócolis', description: 'Arroz branco, alho frito e brócolis grelhado. Preço pode variar.', price: 15.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'g-5', name: 'Arroz de Alho', description: 'Arroz branco, alho frito e salsinha. Preço pode variar.', price: 11.00, image: 'https://images.unsplash.com/photo-1606553894451-b8478417c805?q=80&w=1964&auto=format&fit=crop' },
+          { id: 'g-6', name: 'Baião de Feijão Verde', description: 'Baião de feijao verde cremoso com queijo coalho e cebolinha. Preço pode variar.', price: 18.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'g-7', name: 'Legumes no Azeite', description: 'Brócolis, cenoura, abobrinha e batata inglesa.', price: 19.00, image: 'https://images.unsplash.com/photo-1619881673891-9e79d1a3c74d?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'g-8', name: 'Purê de Batata', description: '', price: 19.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'g-9', name: 'Farofa de Ovos e Banana', description: '', price: 19.00, image: 'https://images.unsplash.com/photo-1606553894451-b8478417c805?q=80&w=1964&auto=format&fit=crop' },
+          { id: 'g-10', name: 'Farofa de Cebola, Ovos e Bacon', description: '', price: 22.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'g-11', name: 'Macaxeira Frita', description: '', price: 19.00, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+        ],
+        'prato-infantil': [
+          { id: 'pi-1', name: 'Filé Kids', description: 'Filé mignon grelhado com arroz branco e batata frita.', price: 29.00, image: 'https://images.unsplash.com/photo-1627940179979-d3e9114acdfa?q=80&w=1974&auto=format&fit=crop' },
+        ],
+        'sobremesas': [
+          { id: 'sm-1', name: 'Pudim', description: '', price: 11.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'sm-2', name: 'Cheesecake de Doce de Leite Argentino', description: '', price: 19.00, image: 'https://images.unsplash.com/photo-1606553894451-b8478417c805?q=80&w=1964&auto=format&fit=crop' },
+          { id: 'sm-3', name: 'Torta de Chocolate com Frutas da Estação', description: '', price: 19.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+        ],
+        'sucos': [
+          { id: 's-1', name: 'Laranja', description: 'Preço pode variar.', price: 12.00, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+          { id: 's-2', name: 'Limão', description: 'Preço pode variar.', price: 10.00, image: 'https://images.unsplash.com/photo-1563220468-245781a7b8e5?q=80&w=1935&auto=format&fit=crop' },
+          { id: 's-3', name: 'Morango', description: 'Preço pode variar.', price: 15.00, image: 'https://images.unsplash.com/photo-1619881673891-9e79d1a3c74d?q=80&w=1974&auto=format&fit=crop' },
+          { id: 's-4', name: 'Laranja com Morango', description: 'Preço pode variar.', price: 16.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 's-5', name: 'Maracujá', description: 'Preço pode variar.', price: 12.00, image: 'https://images.unsplash.com/photo-1606553894451-b8478417c805?q=80&w=1964&auto=format&fit=crop' },
+          { id: 's-6', name: 'Acerola', description: 'Preço pode variar.', price: 10.00, image: 'https://images.unsplash.com/photo-1623861590741-fe23a9d722e0?q=80&w=1974&auto=format&fit=crop' },
+        ],
+        'bebidas-sem-alcool': [
+          { id: 'bsa-1', name: 'Heineken Zero', description: '', price: 11.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'bsa-2', name: 'Refrigerante Lata', description: '', price: 6.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'bsa-3', name: 'Refrigerante ks', description: '', price: 5.50, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'bsa-4', name: 'Red Bull', description: '', price: 14.00, image: 'https://images.unsplash.com/photo-1619881673891-9e79d1a3c74d?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'bsa-5', name: 'SCWEPPS citrus', description: '', price: 6.50, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'bsa-6', name: 'Agua sem Gás', description: '', price: 5.00, image: 'https://images.unsplash.com/photo-1606553894451-b8478417c805?q=80&w=1964&auto=format&fit=crop' },
+          { id: 'bsa-7', name: 'Água com Gás', description: '', price: 5.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+        ],
+        'cervejas': [
+          { id: 'c-1', name: 'Heineken 600 ml', description: '', price: 17.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'c-2', name: 'Stella Artois 600 ml', description: '', price: 16.00, image: 'https://images.unsplash.com/photo-1606553894451-b8478417c805?q=80&w=1964&auto=format&fit=crop' },
+          { id: 'c-3', name: 'Spaten 600 ml', description: '', price: 16.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'c-4', name: 'Sol 330ml', description: '', price: 9.00, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'c-5', name: 'Stella Gold 330 ml', description: '', price: 10.00, image: 'https://images.unsplash.com/photo-1619881673891-9e79d1a3c74d?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'c-6', name: 'Heineken 330 ml', description: '', price: 11.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'c-7', name: 'Chopp Heineken 380 ml', description: '', price: 12.00, image: 'https://images.unsplash.com/photo-1606553894451-b8478417c805?q=80&w=1964&auto=format&fit=crop' },
+          { id: 'c-8', name: 'Stella Artois 330 ml', description: '', price: 11.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'c-9', name: 'Baden Baden 600ml', description: '', price: 23.00, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'c-10', name: 'Original 600 ml', description: '', price: 14.00, image: 'https://images.unsplash.com/photo-1619881673891-9e79d1a3c74d?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'c-11', name: 'Amstel 600 ml', description: '', price: 11.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'c-12', name: 'Eiserbahn 600 ml', description: '', price: 11.00, image: 'https://images.unsplash.com/photo-1606553894451-b8478417c805?q=80&w=1964&auto=format&fit=crop' },
+          { id: 'c-13', name: 'Eiserbahn 330 ml', description: '', price: 9.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'c-14', name: 'Budweiser 600 ml', description: '', price: 12.00, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+        ],
+        'vodkas-e-whisky': [
+          { id: 'vw-1', name: 'Black & White', description: 'Preço pode variar.', price: 14.00, image: 'https://images.unsplash.com/photo-1619881673891-9e79d1a3c74d?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'vw-2', name: 'Red Label', description: 'Preço pode variar.', price: 16.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'vw-3', name: 'Old Parr 12 anos', description: 'Preço pode variar.', price: 21.00, image: 'https://images.unsplash.com/photo-1606553894451-b8478417c805?q=80&w=1964&auto=format&fit=crop' },
+          { id: 'vw-4', name: 'Black Label 12 anos', description: 'Preço pode variar.', price: 23.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'vw-5', name: 'Chivas 12 anos', description: 'Preço pode variar.', price: 23.00, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'vw-6', name: 'Vodka Sminorff', description: 'Preço pode variar.', price: 10.00, image: 'https://images.unsplash.com/photo-1619881673891-9e79d1a3c74d?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'vw-7', name: 'Vodka Absolut', description: 'Preço pode variar.', price: 17.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'vw-8', name: 'Ciroc', description: 'Preço pode variar.', price: 30.00, image: 'https://images.unsplash.com/photo-1606553894451-b8478417c805?q=80&w=1964&auto=format&fit=crop' },
+          { id: 'vw-9', name: 'Grey Goose', description: 'Preço pode variar.', price: 32.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+        ],
+        'licores-e-tequilas': [
+          { id: 'lt-1', name: 'Licor 43', description: 'Preço pode variar.', price: 23.00, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'lt-2', name: 'Tequila Prata', description: 'Preço pode variar.', price: 18.00, image: 'https://images.unsplash.com/photo-1619881673891-9e79d1a3c74d?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'lt-3', name: 'Cointreau', description: 'Preço pode variar.', price: 22.00, image: 'https://images.unsplash.com/photo-1572911295240-5e347716f86a?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'lt-4', name: 'Tequila Ouro', description: 'Preço pode variar.', price: 18.00, image: 'https://images.unsplash.com/photo-1606553894451-b8478417c805?q=80&w=1964&auto=format&fit=crop' },
+        ],
+        'destilados': [
+          { id: 'd-1', name: 'Gin Tanqueray', description: 'Preço pode variar.', price: 16.00, image: 'https://images.unsplash.com/photo-1616254425444-245c363d6b05?q=80&w=1974&auto=format&fit=crop' },
+          { id: 'd-2', name: 'Ypioca 150', description: 'Preço pode variar.', price: 11.00, image: 'https://images.unsplash.com/photo-1579294200673-c15555d49658?q=80&w=1935&auto=format&fit=crop' },
+          { id: 'd-3', name: 'Campari', description: 'Preço pode variar.', price: 9.00, image: 'https://images.unsplash.com/photo-1619881673891-9e79d1a3c74d?q=80&w=1974&auto=format&fit=crop' },
+        ],
+      };
+
+      // Elementos do DOM
+      const menuContainer = document.getElementById('menu-items-container');
+      const categoryNav = document.getElementById('category-nav');
+      const cartContainer = document.getElementById('cart-container');
+      const cartTotalElement = document.getElementById('cart-total');
+      const orderBtn = document.getElementById('order-btn');
+      const paymentBtn = document.getElementById('payment-btn');
+      const searchInput = document.getElementById('search-input');
+      const clientInfoModal = new bootstrap.Modal(document.getElementById('clientInfoModal'));
+      const confirmOrderBtn = document.getElementById('confirm-order-btn');
+      const clientInfoForm = document.getElementById('client-info-form');
+
+      // Estado da aplicação
+      let activeCategory = 'entradas';
+      let cart = [];
+
+      // Função para formatar o nome das categorias
+      const formatCategoryName = (name) => {
+        return name.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      };
+
+      // Função para renderizar os botões de navegação das categorias
+      const renderCategoryButtons = () => {
+        categoryNav.innerHTML = '';
+        Object.keys(menuData).forEach(category => {
+          const btn = document.createElement('button');
+          btn.className = `btn btn-lg rounded-pill mx-2 category-btn ${activeCategory === category ? 'active' : 'bg-white text-dark shadow-sm'}`;
+          btn.textContent = formatCategoryName(category);
+          btn.addEventListener('click', () => {
+            activeCategory = category;
+            searchInput.value = '';
+            renderCategoryButtons();
+            renderMenuItems();
+          });
+          categoryNav.appendChild(btn);
+        });
+      };
+
+      // Função para renderizar os itens do menu
+      const renderMenuItems = () => {
+        menuContainer.innerHTML = '';
+        const itemsToRender = menuData[activeCategory] || [];
+        const searchQuery = searchInput.value.toLowerCase();
+
+        const filteredItems = itemsToRender.filter(item =>
+          item.name.toLowerCase().includes(searchQuery) ||
+          item.description.toLowerCase().includes(searchQuery)
+        );
+
+        if (filteredItems.length === 0) {
+          menuContainer.innerHTML = `<p class="text-center text-muted fs-5 mt-4 col-12">Nenhum item encontrado.</p>`;
+          return;
+        }
+
+        filteredItems.forEach(item => {
+          const col = document.createElement('div');
+          col.className = 'col';
+          col.innerHTML = `
+            <div class="card item-card h-100 shadow-sm border-0">
+              <img src="${item.image}" class="card-img-top object-fit-cover rounded-top-4" alt="${item.name}" style="height: 200px;" onerror="this.onerror=null; this.src='https://placehold.co/400x200/F0F0F0/000000?text=Imagem+nao+disponivel';">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title fw-bold text-dark">${item.name}</h5>
+                <p class="card-text text-muted flex-grow-1">${item.description}</p>
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                  <span class="fs-4 fw-bold text-success">R$ ${item.price.toFixed(2)}</span>
+                  <button class="btn btn-primary btn-custom add-to-cart-btn" data-id="${item.id}" data-category="${activeCategory}">Adicionar</button>
+                </div>
+              </div>
+            </div>
+          `;
+          menuContainer.appendChild(col);
+        });
+      };
+
+      // Adiciona um item ao carrinho
+      const addToCart = (item) => {
+        const existingItem = cart.find(cartItem => cartItem.id === item.id);
+        if (existingItem) {
+          existingItem.quantity++;
+        } else {
+          cart.push({ ...item, quantity: 1 });
+        }
+        updateCartDisplay();
+      };
+
+      // Remove um item do carrinho
+      const removeFromCart = (itemId) => {
+        const itemIndex = cart.findIndex(cartItem => cartItem.id === itemId);
+        if (itemIndex > -1) {
+          if (cart[itemIndex].quantity > 1) {
+            cart[itemIndex].quantity--;
+          } else {
+            cart.splice(itemIndex, 1);
+          }
+        }
+        updateCartDisplay();
+      };
+
+      // Atualiza a exibição do carrinho
+      const updateCartDisplay = () => {
+        cartContainer.innerHTML = '';
+        if (cart.length === 0) {
+          cartContainer.innerHTML = `<p class="text-center text-muted">O seu carrinho está vazio.</p>`;
+          orderBtn.disabled = true;
+          paymentBtn.disabled = true;
+        } else {
+          orderBtn.disabled = false;
+          paymentBtn.disabled = false;
+          cart.forEach(item => {
+            const itemElement = document.createElement('div');
+            itemElement.className = 'd-flex align-items-center mb-3 pb-3 border-bottom';
+            itemElement.innerHTML = `
+              <img src="${item.image}" alt="${item.name}" class="rounded-3 me-3" style="width: 60px; height: 60px; object-fit: cover;" onerror="this.onerror=null; this.src='https://placehold.co/60x60/F0F0F0/000000?text=Img';">
+              <div class="flex-grow-1">
+                <h6 class="mb-0 fw-bold text-dark">${item.name}</h6>
+                <p class="text-muted mb-0">R$ ${item.price.toFixed(2)}</p>
+              </div>
+              <div class="d-flex align-items-center">
+                <button class="btn btn-sm btn-outline-danger me-2" data-id="${item.id}" onclick="removeFromCart('${item.id}')">
+                  -
+                </button>
+                <span class="fw-bold">${item.quantity}</span>
+                <button class="btn btn-sm btn-outline-success ms-2" data-id="${item.id}" onclick="addToCart(getItemById('${item.id}'))">
+                  +
+                </button>
+              </div>
+            `;
+            cartContainer.appendChild(itemElement);
+          });
+        }
+        calculateTotal();
+      };
+
+      // Função auxiliar para encontrar um item no menu por ID
+      const getItemById = (id) => {
+        for (const category in menuData) {
+          const item = menuData[category].find(item => item.id === id);
+          if (item) return item;
+        }
+        return null;
+      };
+
+      // Adiciona o método getItemById ao escopo global para o onclick
+      window.getItemById = getItemById;
+      window.removeFromCart = removeFromCart;
+      window.addToCart = addToCart;
+
+      // Calcula e exibe o total do carrinho
+      const calculateTotal = () => {
+        const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        cartTotalElement.textContent = `R$ ${total.toFixed(2)}`;
+      };
+      
+      // Lida com o evento de clique nos botões "Adicionar"
+      menuContainer.addEventListener('click', (event) => {
+        if (event.target.classList.contains('add-to-cart-btn')) {
+          const itemId = event.target.getAttribute('data-id');
+          const item = getItemById(itemId);
+          if (item) {
+            addToCart(item);
+          }
+        }
+      });
+      
+      // Lida com a pesquisa de itens
+      searchInput.addEventListener('input', renderMenuItems);
+
+      // Lida com o envio do pedido
+      orderBtn.addEventListener('click', () => {
+        if (cart.length > 0) {
+          clientInfoModal.show();
+        }
+      });
+
+      // Lida com a confirmação do pedido
+      confirmOrderBtn.addEventListener('click', () => {
+        const clientName = document.getElementById('client-name').value;
+        const clientTable = document.getElementById('client-table').value;
+        if (clientName && clientTable) {
+          // Aqui você pode adicionar a lógica para enviar o pedido (para um backend real)
+          console.log(`Pedido de ${clientName} (Mesa ${clientTable}):`, JSON.stringify(cart));
+          alert(`Pedido enviado com sucesso para a mesa ${clientTable}!\nPor favor, aguarde o seu pedido.`);
+          cart = []; // Limpa o carrinho
+          clientInfoModal.hide();
+          updateCartDisplay();
+          document.getElementById('client-info-form').reset();
+        } else {
+          alert('Por favor, preencha o seu nome e o número da mesa.');
+        }
+      });
+
+      // Lida com o pagamento simulado
+      paymentBtn.addEventListener('click', () => {
+        if (cart.length > 0) {
+          alert('Redirecionando para a página de pagamento... (Simulação)');
+          // Lógica de pagamento simulada
+          setTimeout(() => {
+            alert('Pagamento processado com sucesso! Agradecemos a preferência.');
+            cart = [];
+            updateCartDisplay();
+          }, 2000);
+        }
+      });
+
+      // Inicialização
+      renderCategoryButtons();
+      renderMenuItems();
+      updateCartDisplay();
+    });
+  </script>
+</body>
+</html>
